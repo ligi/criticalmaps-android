@@ -33,7 +33,7 @@ public class TheChat {
     public void chatShouldBeAccessible() {
         onView(withId(R.id.drawer_layout)).perform(open());
         onView(withText(R.string.section_chat)).perform(click());
-        onView(withId(R.id.chat_list)).check(matches(isDisplayed()));
+        onView(withId(R.id.chat_recycler)).check(matches(isDisplayed()));
         Spoon.screenshot(mActivityRule.getActivity(), "chat");
     }
 
