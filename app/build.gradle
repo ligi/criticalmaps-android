@@ -1,7 +1,7 @@
 apply plugin: 'android-sdk-manager'
 apply plugin: 'com.android.application'
-apply plugin: 'de.mobilej.unmock'
 apply plugin: 'spoon'
+apply plugin: 'de.mobilej.unmock'
 
 android {
     compileSdkVersion 23
