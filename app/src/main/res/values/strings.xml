@@ -15,13 +15,13 @@
     <string name="yes">Yes</string>
     <string name="no">Nope</string>
 
-    <!-- acivity bar -->
+    <!-- activity bar -->
     <string name="tracking">Tracking</string>
-    <string name="show_sternfahrt_routes">Show sternfahrt routes</string>
     <string name="close_button">Close</string>
     <string name="feedback">Feedback</string>
     <string name="datenschutz">Privacy policy</string>
     <string name="take_picture">Take picture</string>
+    <string name="rate_the_app">Rate the App</string>
 
     <!-- fragment_map -->
     <string name="map_searching_for_location">Waiting for GPS signal</string>
@@ -30,6 +30,7 @@
         Activate tracking to be able to see all other cyclists. \n\n
         Just tap here!
     </string>
+    <string name="osm_credits" translatable="false">\u00a9 <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors</string>
 
     <!-- prerequisites -->
     <string name="prerequisites_no_internet_enabled_title">Your internet connection is deactivated or blocked</string>
@@ -56,6 +57,7 @@
     <string name="rules_friendly_explain">Don\'t allow yourself to be provoked. Be friendly to the police, motorists and everybody else, even if they are not.</string>
     <string name="rules_fun">Have fun!</string>
     <string name="rules_fun_explain">Enjoy reclaimed streets. Go checkout the Sound Bikes. Chat with motorists, pedestrian and let them know what\'s going on. Most importantly: Have fun!</string>
+    <string name="rules_image_source">Images by criticalmass-hh.de (CC BY-NC-ND 3.0 DE)</string>
 
     <!-- fragment_twitter -->
     <string name="twitter_heading">All Tweets containing \"CriticalMaps\"</string>
@@ -65,8 +67,22 @@
     <!-- fragment_chat -->
     <string name="chat_heading">Messages will be deleted after 30 minutes.</string>
     <string name="chat_send">Send</string>
-    <string name="chat_text">You have 255 characters...</string>
-    <string name="chat_sending">Sending...</string>
+    <string name="chat_text">Your message &#8230;</string>
+    <string name="chat_sending">Sending &#8230;</string>
+
+    <!-- fragment_about -->
+    <string name="about_heading_social">social stuff</string>
+    <string name="about_heading_website">website</string>
+    <string name="about_text_map_url" translatable="false">criticalmaps.net</string>
+    <string name="about_heading_contributions">contributions</string>
+    <string name="about_text_contributors" translatable="false">&#8226; Gitti la Mar (Logo) \n&#8226; Jan Rabe (Code) \n&#8226; Christian Balster (Code) \n&#8226; Ligi (Code) \n&#8226; Caner Başaran (Translations) \n&#8226; Tobias Preuss (Code)\n&#8226; Luca Gemini (Translations)\n&#8226; Lena Osswald (Translations)\n&#8226; Rodrigo Aguilera (Translations)</string>
+    <string name="about_heading_code">code</string>
+    <string name="about_text_github_url" translatable="false">github.com/criticalmaps/criticalmaps-android</string>
+    <string name="about_heading_opensource">open source licenses</string>
+    <string name="about_text_opensource">We are using the following open source libraries. Huge thanks to everyone involved in these projects!</string>
+    <string name="about_license_website">website</string>
+    <string name="about_license_more">more</string>
+    <string name="about_license_less">less</string>
 
     <!-- notifications -->
     <string name="notification_alarm_title">don\'t forget:</string>
@@ -89,10 +105,10 @@
     </string>
     <string name="camera_upload">Upload image!</string>
     <string name="camera_discard">Nope :-(</string>
-    <string name="camera_uploading_progress">uploading...</string>
+    <string name="camera_uploading_progress">Uploading &#8230;</string>
     <string name="camera_upload_failed_title">Image upload failed</string>
     <string name="camera_upload_failed_message">Please try again</string>
-    <string name="camera_processing_image">Processing image...</string>
+    <string name="camera_processing_image">Processing image &#8230;</string>
     <string name="camera_no_location_no_camera">You can\'t upload images without a GPS signal</string>
     <string name="camera_image_upload_succeeded_title">Image upload worked!</string>
     <string name="camera_image_upload_succeeded_message">The picture is uploaded to gallery on criticalmaps.net </string>
@@ -115,5 +131,6 @@
     <string name="introduction_careful">Please rather pay attention to traffic instead of the app.</string>
     <string name="introduction_bugs">If you find bugs in the app, please let us know by clicking the feedback-button in the settings-menu.</string>
     <string name="introduction_requisites">In order for this app to run properly, you need to have a working mobile data connection and GPS enabled.</string>
-
+    <string name="open_drawer">Open drawer</string>
+    <string name="close_drawer">Close drawer</string>
 </resources>

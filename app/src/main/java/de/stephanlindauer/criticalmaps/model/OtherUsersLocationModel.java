@@ -9,20 +9,10 @@ import java.util.Iterator;
 
 public class OtherUsersLocationModel {
 
-    //singleton
-    private static OtherUsersLocationModel instance;
-
-    private ArrayList<GeoPoint> otherUsersLocations = new ArrayList<GeoPoint>();
-
-    public static OtherUsersLocationModel getInstance() {
-        if (OtherUsersLocationModel.instance == null) {
-            OtherUsersLocationModel.instance = new OtherUsersLocationModel();
-        }
-        return OtherUsersLocationModel.instance;
-    }
+    private ArrayList<GeoPoint> otherUsersLocations = new ArrayList<>();
 
     public void setNewJSON(JSONObject jsonObject) throws JSONException {
-        otherUsersLocations = new ArrayList<GeoPoint>();
+        otherUsersLocations = new ArrayList<>(jsonObject.length());
 
         Iterator<String> keys = jsonObject.keys();
         while (keys.hasNext()) {

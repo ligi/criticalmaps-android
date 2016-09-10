@@ -1,60 +1,47 @@
 package de.stephanlindauer.criticalmaps.handler;
 
-import android.app.Activity;
-import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.provider.MediaStore;
 
-import java.io.File;
-
+import de.stephanlindauer.criticalmaps.App;
+import de.stephanlindauer.criticalmaps.Main;
 import de.stephanlindauer.criticalmaps.R;
-import de.stephanlindauer.criticalmaps.fragments.SuperFragment;
-import de.stephanlindauer.criticalmaps.model.OwnLocationModel;
+import de.stephanlindauer.criticalmaps.utils.AlertBuilder;
 import de.stephanlindauer.criticalmaps.utils.ImageUtils;
 import de.stephanlindauer.criticalmaps.vo.RequestCodes;
 import de.stephanlindauer.criticalmaps.vo.ResultType;
 
+import java.io.File;
+
 public class StartCameraHandler extends AsyncTask<Void, Void, ResultType> {
 
-    private SuperFragment superFragment;
-    private File outputFile;
-    private Activity activity;
+    private Main activity;
 
-
-    public StartCameraHandler(SuperFragment superFragment) {
-        this.superFragment = superFragment;
-        this.activity = superFragment.getActivity();
+    public StartCameraHandler(Main mainActivity) {
+        this.activity = mainActivity;
     }
 
     @Override
     protected void onPreExecute() {
-        if (OwnLocationModel.getInstance().ownLocation == null) {
-            new AlertDialog.Builder(activity)
-                    .setMessage(R.string.camera_no_location_no_camera)
-                    .setPositiveButton(R.string.ok, null)
-                    .show();
-            cancel(true);
+        if (App.components().ownLocationmodel().ownLocation == null) {
+            AlertBuilder.show(activity,R.string.something_went_wrong,R.string.camera_no_location_no_camera);
         }
         if (!activity.getPackageManager().hasSystemFeature(PackageManager.FEATURE_CAMERA)) {
-            new AlertDialog.Builder(activity)
-                    .setMessage(R.string.camera_no_camera_no_camera)
-                    .setPositiveButton(R.string.ok, null)
-                    .show();
-            cancel(true);
+            AlertBuilder.show(activity,R.string.something_went_wrong,R.string.camera_no_camera_no_camera);
         }
     }
 
     @Override
     protected ResultType doInBackground(Void... voids) {
-        outputFile = ImageUtils.getNewOutputImageFile();
-        superFragment.setNewCameraOutputFile(outputFile);
+        final File outputFile = ImageUtils.getNewOutputImageFile();
+        activity.setNewCameraOutputFile(outputFile); // FIXME: 07.09.2015
 
         PackageManager packageManager = activity.getPackageManager();
 
-        if (packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA) == false) {
+        if (!packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA)) {
             return ResultType.FAILED;
         }
 
@@ -62,17 +49,14 @@ public class StartCameraHandler extends AsyncTask<Void, Void, ResultType> {
 
         Intent cameraIntent = new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
         cameraIntent.putExtra(MediaStore.EXTRA_OUTPUT, imageCaptureUri);
-        superFragment.startActivityForResult(cameraIntent, RequestCodes.CAMERA_CAPTURE_IMAGE_REQUEST_CODE);
+        activity.startActivityForResult(cameraIntent, RequestCodes.CAMERA_CAPTURE_IMAGE_REQUEST_CODE);
         return ResultType.SUCCEEDED;
     }
 
     @Override
     protected void onPostExecute(ResultType resultType) {
         if (resultType == ResultType.FAILED) {
-            new AlertDialog.Builder(activity)
-                    .setMessage(R.string.camera_no_camera)
-                    .setPositiveButton(R.string.ok, null)
-                    .show();
+            AlertBuilder.show(activity,R.string.something_went_wrong,R.string.camera_no_camera);
         }
     }
 }

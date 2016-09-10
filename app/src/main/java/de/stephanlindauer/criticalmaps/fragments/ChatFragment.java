@@ -1,53 +1,94 @@
 package de.stephanlindauer.criticalmaps.fragments;
 
+import android.animation.Animator;
+import android.animation.AnimatorInflater;
+import android.animation.AnimatorListenerAdapter;
+import android.animation.AnimatorSet;
+import android.content.res.ColorStateList;
+import android.graphics.PorterDuff;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
+import android.support.design.widget.FloatingActionButton;
+import android.support.design.widget.TextInputLayout;
+import android.support.v4.app.Fragment;
+import android.support.v4.content.ContextCompat;
+import android.support.v4.graphics.drawable.DrawableCompat;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
+import android.text.Editable;
+import android.text.InputFilter;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.EditorInfo;
-import android.widget.Button;
 import android.widget.EditText;
-import android.widget.ListView;
-import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import com.squareup.otto.Subscribe;
 
+import org.ligi.axt.AXT;
+import org.ligi.axt.simplifications.SimpleTextWatcher;
+
+import java.util.ArrayList;
+
+import javax.inject.Inject;
+
+import butterknife.Bind;
+import butterknife.ButterKnife;
+import butterknife.OnClick;
+import de.stephanlindauer.criticalmaps.App;
 import de.stephanlindauer.criticalmaps.R;
 import de.stephanlindauer.criticalmaps.adapter.ChatMessageAdapter;
 import de.stephanlindauer.criticalmaps.events.NewLocationEvent;
 import de.stephanlindauer.criticalmaps.events.NewServerResponseEvent;
+import de.stephanlindauer.criticalmaps.interfaces.IChatMessage;
 import de.stephanlindauer.criticalmaps.model.ChatModel;
 import de.stephanlindauer.criticalmaps.model.OwnLocationModel;
 import de.stephanlindauer.criticalmaps.provider.EventBusProvider;
 import de.stephanlindauer.criticalmaps.vo.chat.OutgoingChatMessage;
 
-public class ChatFragment extends SuperFragment {
+public class ChatFragment extends Fragment {
 
     //dependencies
-    private final ChatModel chatModel = ChatModel.getInstance();
-    private final EventBusProvider eventService = EventBusProvider.getInstance();
-    private final OwnLocationModel ownLocationModel = OwnLocationModel.getInstance();
+    @Inject
+    ChatModel chatModel;
+
+    @Inject
+    EventBusProvider eventService;
+
+    @Inject
+    OwnLocationModel ownLocationModel;
 
     //view
-    private View chatView;
-    private EditText editMessageTextfield;
-    private ListView chatListView;
-    RelativeLayout searchingForLocationOverlay;
+    @Bind(R.id.chat_recycler)
+    RecyclerView chatRecyclerView;
 
-    //adapter
-    private ChatMessageAdapter chatMessageAdapter;
+    @Bind(R.id.text_input_layout)
+    TextInputLayout textInputLayout;
+
+    @Bind(R.id.chat_edit_message)
+    EditText editMessageTextField;
+
+    @Bind(R.id.chat_send_btn)
+    FloatingActionButton sendButton;
 
     //misc
     private boolean isScrolling = false;
+    private boolean isTextInputEnabled = true;
+
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         super.onCreateView(inflater, container, savedInstanceState);
-        chatView = inflater.inflate(R.layout.fragment_chat, container, false);
+
+        App.components().inject(this);
+        View chatView = inflater.inflate(R.layout.fragment_chat, container, false);
+        ButterKnife.bind(this, chatView);
+
+        chatRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
         return chatView;
     }
 
@@ -55,16 +96,20 @@ public class ChatFragment extends SuperFragment {
     public void onActivityCreated(final Bundle savedState) {
         super.onActivityCreated(savedState);
 
-        chatMessageAdapter = new ChatMessageAdapter(getActivity(), R.layout.view_chatmessage, chatModel.getSavedAndOutgoingMessages());
+        chatModelToAdapter();
 
-        chatListView = (ListView) getActivity().findViewById(R.id.chat_list);
-        chatListView.setAdapter(chatMessageAdapter);
+        textInputLayout.setCounterMaxLength(IChatMessage.MAX_LENGTH);
+        editMessageTextField.setFilters(new InputFilter[]{new InputFilter.LengthFilter(IChatMessage.MAX_LENGTH)});
 
-        chatMessageAdapter.notifyDataSetChanged();
+        Drawable wrappedDrawable = DrawableCompat.wrap(sendButton.getDrawable());
+        DrawableCompat.setTintMode(wrappedDrawable, PorterDuff.Mode.SRC_ATOP);
+        ColorStateList colorStateList = ContextCompat.getColorStateList(getActivity(),
+                R.color.chat_fab_drawable_states);
+        DrawableCompat.setTintList(wrappedDrawable, colorStateList);
+        sendButton.setImageDrawable(wrappedDrawable);
+        sendButton.setEnabled(false);
 
-        chatListView.setSelection(chatListView.getCount());
-
-        chatListView.setOnTouchListener(new View.OnTouchListener() {
+        chatRecyclerView.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
                 switch (event.getActionMasked()) {
@@ -81,8 +126,7 @@ public class ChatFragment extends SuperFragment {
             }
         });
 
-        editMessageTextfield = (EditText) getActivity().findViewById(R.id.chat_edit_message);
-        editMessageTextfield.setOnEditorActionListener(new TextView.OnEditorActionListener() {
+        editMessageTextField.setOnEditorActionListener(new TextView.OnEditorActionListener() {
             @Override
             public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
                 if (actionId == EditorInfo.IME_ACTION_SEND) {
@@ -93,53 +137,66 @@ public class ChatFragment extends SuperFragment {
             }
         });
 
-
-        Button sendButton = (Button) getActivity().findViewById(R.id.chat_send_btn);
-        sendButton.setOnClickListener(new View.OnClickListener() {
+        editMessageTextField.addTextChangedListener(new SimpleTextWatcher() {
             @Override
-            public void onClick(View v) {
-                handleSendClicked();
+            public void afterTextChanged(Editable s) {
+                setSendButtonEnabledWithAnimation(s.length() != 0);
             }
         });
 
-        searchingForLocationOverlay = (RelativeLayout) getActivity().findViewById(R.id.searchingForLocationOverlayChat);
         if (ownLocationModel.ownLocation == null) {
-            searchingForLocationOverlay.setVisibility(View.VISIBLE);
+            setTextInputEnabled(false);
         }
     }
 
-    private void handleSendClicked() {
-        String message = editMessageTextfield.getText().toString();
-
-        if (message.equals(""))
+    private void setSendButtonEnabledWithAnimation(final boolean enabled) {
+        if (sendButton.isEnabled() == enabled) {
             return;
+        }
+
+        final AnimatorSet animatorSet = (AnimatorSet) AnimatorInflater.loadAnimator(getActivity(),
+                R.animator.chat_fab_state_change);
+        animatorSet.setTarget(sendButton);
+
+        // flip button state for color change after first half of the animation
+        final ArrayList<Animator> animations = animatorSet.getChildAnimations();
+        animations.get(0).addListener(new AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                sendButton.setEnabled(enabled);
+            }
+        });
+
+        animatorSet.start();
+    }
+
+    @OnClick(R.id.chat_send_btn)
+    void handleSendClicked() {
+        String message = editMessageTextField.getText().toString();
+
+        if (message.isEmpty()) {
+            return;
+        }
 
         chatModel.setNewOutgoingMessage(new OutgoingChatMessage(message));
 
-        editMessageTextfield.setText("");
-        chatMessageAdapter = new ChatMessageAdapter(getActivity(), 123, chatModel.getSavedAndOutgoingMessages());
-        chatListView.setAdapter(chatMessageAdapter);
-
-        if (!isScrolling)
-            chatListView.setSelection(chatListView.getCount());
+        editMessageTextField.setText("");
+        chatModelToAdapter();
     }
 
-    private void refreshView() {
-        getActivity().runOnUiThread(new Runnable() {
-            public void run() {
-                chatMessageAdapter = new ChatMessageAdapter(getActivity(), 123, chatModel.getSavedAndOutgoingMessages());
-                chatListView.setAdapter(chatMessageAdapter);
+    private void chatModelToAdapter() {
+        final ArrayList<IChatMessage> savedAndOutgoingMessages = chatModel.getSavedAndOutgoingMessages();
+        chatRecyclerView.setAdapter(new ChatMessageAdapter(savedAndOutgoingMessages));
 
-                if (!isScrolling)
-                    chatListView.setSelection(chatListView.getCount());
-            }
-        });
+        if (!isScrolling) {
+            chatRecyclerView.scrollToPosition(savedAndOutgoingMessages.size() - 1);
+        }
     }
 
     @Override
     public void onResume() {
         super.onResume();
-        refreshView();
+        chatModelToAdapter();
         eventService.register(this);
     }
 
@@ -147,22 +204,34 @@ public class ChatFragment extends SuperFragment {
     public void onPause() {
         super.onPause();
         eventService.unregister(this);
+        AXT.at(editMessageTextField).hideKeyBoard();
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        ButterKnife.unbind(this);
     }
 
     @Subscribe
     public void handleNewLocation(NewLocationEvent e) {
-        setSearchingForLocationOverlayState();
+        setTextInputEnabled(true);
     }
 
     @Subscribe
     public void handleNewServerData(NewServerResponseEvent e) {
-        setSearchingForLocationOverlayState();
-        refreshView();
+        chatModelToAdapter();
     }
 
-    public void setSearchingForLocationOverlayState() {
-        if (ownLocationModel.ownLocation != null) {
-            searchingForLocationOverlay.setVisibility(View.GONE);
+    private void setTextInputEnabled(final boolean enabled) {
+        if (!enabled) {
+            editMessageTextField.setEnabled(false);
+            textInputLayout.setHint(getString(R.string.map_searching_for_location));
+            isTextInputEnabled = false;
+        } else if (!isTextInputEnabled) {
+            editMessageTextField.setEnabled(true);
+            textInputLayout.setHint(getString(R.string.chat_text));
+            isTextInputEnabled = true;
         }
     }
 }

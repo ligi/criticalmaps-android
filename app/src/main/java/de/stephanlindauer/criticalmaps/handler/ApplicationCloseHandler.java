@@ -1,13 +1,9 @@
 package de.stephanlindauer.criticalmaps.handler;
 
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.content.DialogInterface;
-import android.content.Intent;
-
+import android.support.v7.app.AlertDialog;
 import de.stephanlindauer.criticalmaps.R;
-import de.stephanlindauer.criticalmaps.notifications.trackinginfo.TrackingInfoNotificationSetter;
-import de.stephanlindauer.criticalmaps.service.ServerSyncService;
 import de.stephanlindauer.criticalmaps.utils.ApplicationCloser;
 
 public class ApplicationCloseHandler {
@@ -33,7 +29,7 @@ public class ApplicationCloseHandler {
             }
         };
 
-        AlertDialog.Builder builder = new AlertDialog.Builder(activity);
+        AlertDialog.Builder builder = new AlertDialog.Builder(activity, R.style.AlertDialogTheme);
         builder.setMessage(R.string.close).setPositiveButton(R.string.yes, dialogClickListener)
                 .setNegativeButton(R.string.no, dialogClickListener).show();
     }

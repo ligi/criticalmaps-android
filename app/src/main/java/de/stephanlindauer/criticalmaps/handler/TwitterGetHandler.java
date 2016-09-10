@@ -1,36 +1,25 @@
 package de.stephanlindauer.criticalmaps.handler;
 
 import android.os.AsyncTask;
+import com.squareup.okhttp.OkHttpClient;
+import com.squareup.okhttp.Request;
+import com.squareup.okhttp.Response;
 
-import org.apache.http.HttpResponse;
-import org.apache.http.HttpStatus;
-import org.apache.http.StatusLine;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.params.BasicHttpParams;
-import org.apache.http.params.HttpConnectionParams;
-import org.apache.http.params.HttpParams;
-import org.json.JSONException;
-
-import java.io.ByteArrayOutputStream;
-import java.text.ParseException;
-
+import de.stephanlindauer.criticalmaps.App;
 import de.stephanlindauer.criticalmaps.fragments.TwitterFragment;
 import de.stephanlindauer.criticalmaps.model.TwitterModel;
 import de.stephanlindauer.criticalmaps.vo.Endpoints;
 import de.stephanlindauer.criticalmaps.vo.ResultType;
+import java.text.ParseException;
+import org.json.JSONException;
 
 public class TwitterGetHandler extends AsyncTask<Void, Void, ResultType> {
 
-    //const
-    public static final int TIME_OUT = 15 * 1000; //15 sec
-
     //dependencies
-    TwitterModel twitterModel = TwitterModel.getInstance();
+    private final TwitterModel twitterModel = App.components().twitterModel();
+    private final TwitterFragment twitterFragment;
 
     private String responseString = "";
-    private final TwitterFragment twitterFragment;
 
     public TwitterGetHandler(TwitterFragment twitterFragment) {
         this.twitterFragment = twitterFragment;
@@ -38,42 +27,36 @@ public class TwitterGetHandler extends AsyncTask<Void, Void, ResultType> {
 
     @Override
     protected ResultType doInBackground(Void... params) {
-        final HttpGet request = new HttpGet(Endpoints.GET_TWITTER);
+        final Request request = new Request.Builder().url(Endpoints.GET_TWITTER).get().build();
 
-        final HttpParams httpParams = new BasicHttpParams();
-        HttpConnectionParams.setConnectionTimeout(httpParams, TIME_OUT);
-
-        final HttpClient httpClient = new DefaultHttpClient(httpParams);
-
+        final OkHttpClient httpClient = App.components().okHttpClient();
         try {
-            HttpResponse response = httpClient.execute(request);
-            StatusLine statusLine = response.getStatusLine();
-            if (statusLine.getStatusCode() == HttpStatus.SC_OK) {
-                ByteArrayOutputStream out = new ByteArrayOutputStream();
-                response.getEntity().writeTo(out);
-                out.close();
-                responseString = out.toString();
-            } else {
-                response.getEntity().getContent().close();
-                return ResultType.FAILED;
+            final Response response = httpClient.newCall(request).execute();
+
+            if (response.isSuccessful()) {
+                responseString = response.body().string();
+                response.body().close();
+                return ResultType.SUCCEEDED;
             }
-        } catch (Exception e) {
-            return ResultType.FAILED;
+        } catch (Exception ignored) {
         }
-        return ResultType.SUCCEEDED;
+
+        return ResultType.FAILED;
     }
 
     @Override
     protected void onPostExecute(ResultType resultType) {
+        if (!twitterFragment.isAdded()) {
+            return;
+        }
+
         if (resultType == ResultType.FAILED) {
             twitterFragment.showErrorMessage();
         } else {
             try {
                 twitterModel.setTweetsFromJsonString(responseString);
                 twitterFragment.displayNewData();
-            } catch (JSONException e) {
-                e.printStackTrace();
-            } catch (ParseException e) {
+            } catch (JSONException | ParseException e) {
                 e.printStackTrace();
             }
         }

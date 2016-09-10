@@ -1,92 +1,72 @@
 package de.stephanlindauer.criticalmaps.handler;
 
 import android.os.AsyncTask;
+import android.util.Log;
 
-import org.apache.http.HttpResponse;
-import org.apache.http.HttpStatus;
-import org.apache.http.StatusLine;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.params.BasicHttpParams;
-import org.apache.http.params.HttpConnectionParams;
-import org.apache.http.params.HttpParams;
+import com.squareup.okhttp.MediaType;
+import com.squareup.okhttp.OkHttpClient;
+import com.squareup.okhttp.Request;
+import com.squareup.okhttp.RequestBody;
+import com.squareup.okhttp.Response;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 
-import de.stephanlindauer.criticalmaps.events.NewServerResponseEvent;
+import javax.inject.Inject;
+
 import de.stephanlindauer.criticalmaps.model.ChatModel;
-import de.stephanlindauer.criticalmaps.model.OtherUsersLocationModel;
 import de.stephanlindauer.criticalmaps.model.OwnLocationModel;
 import de.stephanlindauer.criticalmaps.model.UserModel;
-import de.stephanlindauer.criticalmaps.provider.EventBusProvider;
 import de.stephanlindauer.criticalmaps.vo.Endpoints;
 
 public class PullServerHandler extends AsyncTask<Void, Void, String> {
 
     //const
-    public static final int TIME_OUT = 15 * 1000; //15 sec
+    private static final String LOG_TAG = "CM_PullServerHandler";
 
     //dependencies
-    private final OtherUsersLocationModel otherUsersLocationModel = OtherUsersLocationModel.getInstance();
-    private final ChatModel chatModel = ChatModel.getInstance();
-    private final OwnLocationModel ownLocationModel = OwnLocationModel.getInstance();
-    private final EventBusProvider eventService = EventBusProvider.getInstance();
-    private final UserModel userModel = UserModel.getInstance();
+    private final ChatModel chatModel;
+    private final OwnLocationModel ownLocationModel;
+    private final UserModel userModel;
+    private final ServerResponseProcessor serverResponseProcessor;
+    private final OkHttpClient okHttpClient;
+
+    @Inject
+    public PullServerHandler(ChatModel chatModel, OwnLocationModel ownLocationModel, UserModel userModel, ServerResponseProcessor serverResponseProcessor, OkHttpClient okHttpClient) {
+        this.chatModel = chatModel;
+        this.ownLocationModel = ownLocationModel;
+        this.userModel = userModel;
+        this.serverResponseProcessor = serverResponseProcessor;
+        this.okHttpClient = okHttpClient;
+    }
 
     @Override
     protected String doInBackground(Void... params) {
         String jsonPostString = getJsonObject().toString();
 
-        final HttpPost postRequest = new HttpPost(Endpoints.MAIN_POST);
-
-        final HttpParams httpParams = new BasicHttpParams();
-        HttpConnectionParams.setConnectionTimeout(httpParams, TIME_OUT);
+        final RequestBody body = RequestBody.create(MediaType.parse("application/json"), jsonPostString);
+        final Request postRequest = new Request.Builder().url(Endpoints.MAIN_POST).post(body).build();
 
         try {
-            postRequest.setEntity(new StringEntity(jsonPostString));
-        } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
-        }
-
-        final HttpClient httpClient = new DefaultHttpClient(httpParams);
-
-        String responseString = "";
-        try {
-            HttpResponse response = httpClient.execute(postRequest);
-            StatusLine statusLine = response.getStatusLine();
-            if (statusLine.getStatusCode() == HttpStatus.SC_OK) {
-                ByteArrayOutputStream out = new ByteArrayOutputStream();
-                response.getEntity().writeTo(out);
-                out.close();
-                responseString = out.toString();
-            } else {
-                response.getEntity().getContent().close();
+            final Response response = okHttpClient.newCall(postRequest).execute();
+            if (response.isSuccessful()) {
+                String responseBodyString = response.body().string();
+                response.body().close();
+                return responseBodyString;
             }
         } catch (IOException e) {
-            System.out.println();
+            Log.e(LOG_TAG, Log.getStackTraceString(e));
         }
-        return responseString;
+        return "";
     }
 
     @Override
     protected void onPostExecute(String result) {
-        super.onPostExecute(result);
-        JSONObject jsonObject;
-        try {
-            jsonObject = new JSONObject(result);
-            otherUsersLocationModel.setNewJSON(jsonObject.getJSONObject("locations"));
-            chatModel.setNewJson(jsonObject.getJSONObject("chatMessages"));
-        } catch (Exception e) {
-
-        } finally {
-            eventService.post(new NewServerResponseEvent());
+        if (!result.isEmpty()) {
+            serverResponseProcessor.process(result);
         }
     }
 
@@ -94,13 +74,10 @@ public class PullServerHandler extends AsyncTask<Void, Void, String> {
         JSONObject jsonObject = new JSONObject();
 
         try {
-            jsonObject.put("device", userModel.getUniqueDeviceIdHashed());
+            jsonObject.put("device", userModel.getChangingDeviceToken());
 
-            if (ownLocationModel.ownLocation != null) {
-                JSONObject locationObject = new JSONObject();
-                locationObject.put("longitude", Integer.toString(ownLocationModel.ownLocation.getLongitudeE6()));
-                locationObject.put("latitude", Integer.toString(ownLocationModel.ownLocation.getLatitudeE6()));
-                jsonObject.put("location", locationObject);
+            if (ownLocationModel.hasPreciseLocation() && ownLocationModel.isLocationFresh()) {
+                jsonObject.put("location", ownLocationModel.getLocationJson());
             }
 
             if (chatModel.hasOutgoingMessages()) {
@@ -108,7 +85,7 @@ public class PullServerHandler extends AsyncTask<Void, Void, String> {
                 jsonObject.put("messages", messages);
             }
         } catch (JSONException e) {
-            e.printStackTrace();
+            Log.e(LOG_TAG, Log.getStackTraceString(e));
         }
         return jsonObject;
     }

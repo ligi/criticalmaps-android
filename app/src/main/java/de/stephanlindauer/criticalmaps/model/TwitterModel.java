@@ -12,32 +12,23 @@ import de.stephanlindauer.criticalmaps.vo.twitter.Tweet;
 
 public class TwitterModel {
 
-    private ArrayList<Tweet> tweets = new ArrayList<Tweet>();
-
-    //singleton
-    private static TwitterModel instance;
-
-    public static TwitterModel getInstance() {
-        if (TwitterModel.instance == null) {
-            TwitterModel.instance = new TwitterModel();
-        }
-        return TwitterModel.instance;
-    }
+    private ArrayList<Tweet> tweets = new ArrayList<>();
 
     public void setTweetsFromJsonString(String tweetsString) throws JSONException, ParseException {
         tweets.clear();
         JSONObject jsonObject = new JSONObject(tweetsString);
         JSONArray statusesArray = jsonObject.getJSONArray("statuses");
 
-        for (int i = 0; i < statusesArray.length(); i++) {
+        for (int i = 0, statusesArrayLength = statusesArray.length(); i < statusesArrayLength; i++) {
             JSONObject currentStatus = statusesArray.getJSONObject(i);
+            final JSONObject user = currentStatus.getJSONObject("user");
             Tweet tweet = new Tweet()
-                    .setUserName(currentStatus.getJSONObject("user").getString("name"))
-                    .setUserScreenName(currentStatus.getJSONObject("user").getString("screen_name"))
+                    .setUserName(user.getString("name"))
+                    .setUserScreenName(user.getString("screen_name"))
                     .setTweetId(currentStatus.getString("id_str"))
                     .setText(currentStatus.getString("text"))
                     .setTimestamp(TwitterUtils.getTwitterDate(currentStatus.getString("created_at")))
-                    .setProfileImageUrl(currentStatus.getJSONObject("user").getString("profile_image_url_https"));
+                    .setProfileImageUrl(user.getString("profile_image_url_https"));
 
             tweets.add(tweet);
         }

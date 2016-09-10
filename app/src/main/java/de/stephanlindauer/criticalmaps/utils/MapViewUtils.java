@@ -7,9 +7,10 @@ import org.osmdroid.tileprovider.tilesource.TileSourceFactory;
 import org.osmdroid.views.MapView;
 
 public class MapViewUtils {
+
     public static MapView createMapView(Activity activity) {
 
-        MapView mapView = new MapView(activity, null);
+        MapView mapView = new MapView(activity);
         mapView.setTileSource(TileSourceFactory.MAPNIK);
         mapView.setBuiltInZoomControls(true);
         mapView.setMultiTouchControls(true);

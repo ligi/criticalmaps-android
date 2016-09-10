@@ -1,17 +1,20 @@
 language: android
 
-jdk: oraclejdk7
+jdk: oraclejdk8
 
 android:
   components:
-    - platform-tools
+    # workaround to always get the newest sdk tools
+    # see: https://github.com/travis-ci/travis-ci/issues/6040#issuecomment-219367943
     - tools
+    - tools
+    - platform-tools
 
     # The BuildTools version used by your project
-    - build-tools-21.1.2
+    - build-tools-23.0.3
 
     # The SDK version used to compile your project
-    - android-20
+    - android-24
 
     # Additional components
 #    - extra-google-google_play_services
@@ -30,3 +33,6 @@ before_install:
  - chmod +x gradlew
 
 script: 'travis_retry ./gradlew clean build'
+
+notifications:
+  slack: criticalmaps:mCh5Cy9Fl2bVMdnQ9ymeYv3H

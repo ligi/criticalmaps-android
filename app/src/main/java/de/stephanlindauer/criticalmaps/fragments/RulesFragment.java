@@ -1,119 +1,127 @@
 package de.stephanlindauer.criticalmaps.fragments;
 
+import android.animation.LayoutTransition;
+import android.os.Build;
 import android.os.Bundle;
-import android.support.v4.app.FragmentActivity;
+import android.support.annotation.IdRes;
+import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
+import android.widget.LinearLayout;
+import android.widget.ScrollView;
 
-import java.util.ArrayList;
-
+import butterknife.Bind;
+import butterknife.ButterKnife;
 import de.stephanlindauer.criticalmaps.R;
 
-public class RulesFragment extends SuperFragment {
+public class RulesFragment extends Fragment {
 
-    private FragmentActivity activity;
-    private ArrayList<View> panels;
+    private static final String KEY_SCROLLVIEW_POSITION = "scrollview_position";
+    private static final String KEY_ACTIVE_PANEL_ID = "active_panel_id";
+
+    private View currentlyShownPanel;
+
+    @Bind(R.id.rules_subcontainer)
+    LinearLayout linearLayout;
+
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
-
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         super.onCreateView(inflater, container, savedInstanceState);
-        View rootView = inflater.inflate(R.layout.fragment_rules, container, false);
-
-        return rootView;
+        View view = inflater.inflate(R.layout.fragment_rules, container, false);
+        ButterKnife.bind(this, view);
+        return view;
     }
 
     @Override
     public void onActivityCreated(Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
 
-        activity = getActivity();
+        prepareButtonToPanel(R.id.btnCorken, R.id.panelCorken);
+        prepareButtonToPanel(R.id.btnOncomingTraffic, R.id.panelOncomingTraffic);
+        prepareButtonToPanel(R.id.btnSlow, R.id.panelSlow);
+        prepareButtonToPanel(R.id.btnBrake, R.id.panelBrake);
+        prepareButtonToPanel(R.id.btnFriendly, R.id.panelFriendly);
+        prepareButtonToPanel(R.id.btnFun, R.id.panelFun);
+        prepareButtonToPanel(R.id.btnGreen, R.id.panelGreen);
 
-        panels = new ArrayList<View>();
-        panels.add(activity.findViewById(R.id.panelCorken));
-        panels.add(activity.findViewById(R.id.panelOncomingTraffic));
-        panels.add(activity.findViewById(R.id.panelSlow));
-        panels.add(activity.findViewById(R.id.panelBrake));
-        panels.add(activity.findViewById(R.id.panelFriendly));
-        panels.add(activity.findViewById(R.id.panelFun));
-        panels.add(activity.findViewById(R.id.panelGreen));
-
-        hideAllPanels();
-
-
-        Button btnCorken = (Button) activity.findViewById(R.id.btnCorken);
-        btnCorken.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                hideAllPanels();
-                activity.findViewById(R.id.panelCorken).setVisibility(View.VISIBLE);
+        if (savedInstanceState != null) {
+            Integer activePanelId = (Integer) savedInstanceState.get(KEY_ACTIVE_PANEL_ID);
+            if (activePanelId != null) {
+                currentlyShownPanel = findViewById(activePanelId);
+                LayoutTransition layoutTransition = linearLayout.getLayoutTransition();
+                long durationAppearing = layoutTransition.getDuration(LayoutTransition.APPEARING);
+                layoutTransition.setDuration(LayoutTransition.APPEARING, 0);
+                currentlyShownPanel.setVisibility(View.VISIBLE);
+                layoutTransition.setDuration(LayoutTransition.APPEARING, durationAppearing);
             }
-        });
 
-        Button btnOncomingTraffic = (Button) activity.findViewById(R.id.btnOncomingTraffic);
-        btnOncomingTraffic.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                hideAllPanels();
-                activity.findViewById(R.id.panelOncomingTraffic).setVisibility(View.VISIBLE);
+            if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.JELLY_BEAN_MR2) {
+                final int scrollviewPosition = savedInstanceState.getInt(KEY_SCROLLVIEW_POSITION, 0);
+
+                if (scrollviewPosition != 0) {
+                    final ScrollView scrollView = (ScrollView) findViewById(R.id.rules_scrollview);
+
+                    scrollView.post(new Runnable() {
+                        public void run() {
+                            scrollView.scrollTo(0, scrollviewPosition);
+                        }
+                    });
+                }
             }
-        });
-
-        Button btnSlow = (Button) activity.findViewById(R.id.btnSlow);
-        btnSlow.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                hideAllPanels();
-                activity.findViewById(R.id.panelSlow).setVisibility(View.VISIBLE);
-            }
-        });
-
-        Button btnBrake = (Button) activity.findViewById(R.id.btnBrake);
-        btnBrake.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                hideAllPanels();
-                activity.findViewById(R.id.panelBrake).setVisibility(View.VISIBLE);
-            }
-        });
-
-        Button btnFriendly = (Button) activity.findViewById(R.id.btnFriendly);
-        btnFriendly.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                hideAllPanels();
-                activity.findViewById(R.id.panelFriendly).setVisibility(View.VISIBLE);
-            }
-        });
-
-        Button btnFun = (Button) activity.findViewById(R.id.btnFun);
-        btnFun.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                hideAllPanels();
-                activity.findViewById(R.id.panelFun).setVisibility(View.VISIBLE);
-            }
-        });
-
-        Button btnGreen = (Button) activity.findViewById(R.id.btnGreen);
-        btnGreen.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                hideAllPanels();
-                activity.findViewById(R.id.panelGreen).setVisibility(View.VISIBLE);
-            }
-        });
-
-
-    }
-
-    private void hideAllPanels() {
-        for (View view : panels) {
-            view.setVisibility(View.GONE);
         }
     }
 
+    private void prepareButtonToPanel(@IdRes int button, @IdRes int panel) {
+        final View panelView = findViewById(panel);
+        panelView.setVisibility(View.GONE);
+        final PanelShowingOnClickListener onClickListener = new PanelShowingOnClickListener(panelView);
+        findViewById(button).setOnClickListener(onClickListener);
+    }
+
+    private View findViewById(@IdRes final int resId) {
+        return getActivity().findViewById(resId);
+    }
+
+    private class PanelShowingOnClickListener implements View.OnClickListener {
+
+        private final View panel;
+
+        private PanelShowingOnClickListener(final View panel) {
+            this.panel = panel;
+        }
+
+        @Override
+        public void onClick(final View v) {
+            if (currentlyShownPanel != null) {
+                currentlyShownPanel.setVisibility(View.GONE);
+            }
+            if (currentlyShownPanel == panel) {
+                currentlyShownPanel = null;
+            } else {
+                currentlyShownPanel = panel;
+                panel.setVisibility(View.VISIBLE);
+            }
+        }
+    }
+
+    @Override
+    public void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+
+        if (currentlyShownPanel != null) {
+            outState.putInt(KEY_ACTIVE_PANEL_ID, currentlyShownPanel.getId());
+        }
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.JELLY_BEAN_MR2) {
+            outState.putInt(KEY_SCROLLVIEW_POSITION, findViewById(R.id.rules_scrollview).getScrollY());
+        }
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        ButterKnife.unbind(this);
+        currentlyShownPanel = null;
+    }
 }

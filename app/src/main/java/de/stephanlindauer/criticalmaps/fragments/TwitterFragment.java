@@ -1,6 +1,7 @@
 package de.stephanlindauer.criticalmaps.fragments;
 
 import android.os.Bundle;
+import android.support.v4.app.Fragment;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -12,72 +13,84 @@ import android.widget.ProgressBar;
 
 import java.util.ArrayList;
 
+import butterknife.Bind;
+import butterknife.ButterKnife;
+import butterknife.OnClick;
+import de.stephanlindauer.criticalmaps.App;
 import de.stephanlindauer.criticalmaps.R;
 import de.stephanlindauer.criticalmaps.adapter.TweetAdapter;
+import de.stephanlindauer.criticalmaps.handler.PostTweetHandler;
 import de.stephanlindauer.criticalmaps.handler.TwitterGetHandler;
 import de.stephanlindauer.criticalmaps.model.TwitterModel;
 import de.stephanlindauer.criticalmaps.vo.twitter.Tweet;
 
-public class TwitterFragment extends SuperFragment {
+public class TwitterFragment extends Fragment {
 
     //dependencies
-    private TwitterModel twitterModel = TwitterModel.getInstance();
+    private TwitterModel twitterModel = App.components().twitterModel();
 
     //view
-    private View twitterView;
-    private ProgressBar loadingSpinner;
-    private SwipeRefreshLayout swipeLayout;
-    private Button errorButton;
+    @Bind(R.id.twitter_error)
+    LinearLayout errorMessage;
 
-    private LinearLayout errorMessage;
+    @Bind(R.id.twitter_error_button)
+    Button errorButton;
+
+    @Bind(R.id.progressSpinner)
+    ProgressBar loadingSpinner;
+
+    @Bind(R.id.tweet_list)
+    ListView tweetListView;
+
+    @Bind(R.id.swipe_container)
+    SwipeRefreshLayout swipeLayout;
 
     //adapter
     private TweetAdapter tweetAdapter;
-    //misc
-    private final TwitterFragment thiz = this;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         super.onCreateView(inflater, container, savedInstanceState);
-        twitterView = inflater.inflate(R.layout.fragment_twitter, container, false);
-        return twitterView;
+        View view = inflater.inflate(R.layout.fragment_twitter, container, false);
+        ButterKnife.bind(this, view);
+        return view;
     }
 
     @Override
     public void onActivityCreated(final Bundle savedState) {
         super.onActivityCreated(savedState);
 
-        errorMessage = (LinearLayout) getActivity().findViewById(R.id.twitter_error);
-        errorButton = (Button) getActivity().findViewById(R.id.twitter_error_button);
-        loadingSpinner = (ProgressBar) getActivity().findViewById(R.id.progressSpinner);
         tweetAdapter = new TweetAdapter(getActivity(), R.layout.view_tweet, new ArrayList<Tweet>());
-
-        ListView tweetListView = (ListView) getActivity().findViewById(R.id.tweet_list);
         tweetListView.setAdapter(tweetAdapter);
 
-        swipeLayout = (SwipeRefreshLayout) getActivity().findViewById(R.id.swipe_container);
         swipeLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
             @Override
             public void onRefresh() {
-                new TwitterGetHandler(thiz).execute();
+                new TwitterGetHandler(TwitterFragment.this).execute();
             }
         });
-        swipeLayout.setColorScheme(android.R.color.holo_blue_bright,
-                android.R.color.darker_gray,
-                android.R.color.holo_blue_bright,
-                android.R.color.darker_gray);
+
+        swipeLayout.setColorSchemeResources(
+                R.color.twitter_indicator_color_first,
+                R.color.twitter_indicator_color_second);
 
         errorButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                new TwitterGetHandler(thiz).execute();
+                new TwitterGetHandler(TwitterFragment.this).execute();
                 loadingSpinner.setVisibility(View.VISIBLE);
                 errorMessage.setVisibility(View.GONE);
             }
         });
 
         new TwitterGetHandler(this).execute();
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        ButterKnife.unbind(this);
     }
 
     public void displayNewData() {
@@ -95,5 +108,10 @@ public class TwitterFragment extends SuperFragment {
         swipeLayout.setVisibility(View.GONE);
         loadingSpinner.setVisibility(View.GONE);
         errorMessage.setVisibility(View.VISIBLE);
+    }
+
+    @OnClick(R.id.twitter_new_tweet_button)
+    void handleNewTweetClicked(View view) {
+        new PostTweetHandler(getActivity()).execute();
     }
 }
